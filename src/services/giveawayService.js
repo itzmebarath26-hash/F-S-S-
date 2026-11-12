@@ -9,7 +9,7 @@ import { checkRateLimit, getRateLimitStatus } from '../utils/rateLimiter.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
 import { createTicket } from './ticket.js';
 
-const GIVEAWAY_CONFIG = botConfig.giveaways || {};
+const GIVEAWAY_CONFIG = botConfig.giveaways || botConfig;
 const GIVEAWAY_INTERACTION_COOLDOWN = 1000;
 
 function getGiveawayInteractionKey(userId, giveawayId) {
