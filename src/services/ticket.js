@@ -79,10 +79,23 @@ export const getUserTicketCount = wrapServiceBoundary(async function getUserTick
   context: {},
 });
 
-export async function createTicket(guild, member, categoryId, reason = 'No reason provided', priority = 'none') {
+export async function createTicket(
+  guild,
+  member,
+  categoryId,
+  reason = 'No reason provided',
+  priority = 'none',
+  options = {}
+) {
   try {
     const config = await getGuildConfig(guild.client, guild.id);
     const ticketConfig = config.tickets || {};
+    
+    const {
+  channelName: customChannelName = null,
+  additionalUserIds = [],
+  initialContent = null,
+} = options;
     
     const maxTicketsPerUser = config.maxTicketsPerUser ?? 3;
     const currentTicketCount = await getUserTicketCount(guild.id, member.id);
@@ -118,7 +131,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     
     const ticketNumber = await getNextTicketNumber(guild.id);
     
-    let channelName = `ticket-${ticketNumber}`;
+    let channelName = customChannelName || `ticket-${ticketNumber}`;
     
     if (priority !== 'none') {
       const priorityInfo = PRIORITY_MAP[priority];
@@ -138,6 +151,26 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
         },
         {
           id: member.id,
+                  ...(config.ticketStaffRoleId ? [{
+          id: config.ticketStaffRoleId,
+          allow: [
+            PermissionFlagsBits.ViewChannel,
+            PermissionFlagsBits.SendMessages,
+            PermissionFlagsBits.AttachFiles,
+            PermissionFlagsBits.ReadMessageHistory,
+          ],
+        }] : []),
+                  ...additionalUserIds
+          .filter(userId => userId && userId !== member.id)
+          .map(userId => ({
+            id: userId,
+            allow: [
+              PermissionFlagsBits.ViewChannel,
+              PermissionFlagsBits.SendMessages,
+              PermissionFlagsBits.AttachFiles,
+              PermissionFlagsBits.ReadMessageHistory,
+            ],
+          })),
           allow: [
             PermissionFlagsBits.ViewChannel,
             PermissionFlagsBits.SendMessages,
@@ -201,7 +234,7 @@ export async function createTicket(guild, member, categoryId, reason = 'No reaso
     }
     
     const staffMention = config.ticketStaffRoleId ? ` <@&${config.ticketStaffRoleId}>` : '';
-    const messageContent = `${member.toString()}${staffMention}`;
+    const messageContent = initialContent || `${member.toString()}${staffMention}`;
     
     const ticketMessage = await channel.send({ 
       content: messageContent,
