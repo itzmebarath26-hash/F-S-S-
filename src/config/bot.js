@@ -263,7 +263,7 @@ export const botConfig = {
 giveawayClaim: {
     enabled: true,
 
-    category: null,
+    category: "1570429219731935252",
 
     channelName: "giveaway-claim",
 
