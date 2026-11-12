@@ -257,7 +257,20 @@ export const botConfig = {
     // Channel ID where ticket logs are sent.
     logChannel: null,
   },
+// ========================
+// GIVEAWAY CLAIM SETTINGS
+// ========================
+giveawayClaim: {
+    enabled: true,
 
+    category: null,
+
+    channelName: "giveaway-claim",
+
+    pingWinner: true,
+
+    pingHost: true,
+},
   // =========================
   // GIVEAWAY SETTINGS
   // =========================
