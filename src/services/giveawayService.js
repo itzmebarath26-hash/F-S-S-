@@ -7,6 +7,7 @@ import { getColor, botConfig } from '../config/bot.js';
 import { getEndedGiveaways, markGiveawayEnded } from '../utils/database.js';
 import { checkRateLimit, getRateLimitStatus } from '../utils/rateLimiter.js';
 import { logEvent, EVENT_TYPES } from './loggingService.js';
+import { createTicket } from './ticket.js';
 
 const GIVEAWAY_CONFIG = botConfig.giveaways || {};
 const GIVEAWAY_INTERACTION_COOLDOWN = 1000;
@@ -390,6 +391,71 @@ export async function checkGiveaways(client) {
           const winnerAnnouncement = `🎉 Congratulations ${winnerMentions}! You won the **${giveaway.prize || 'giveaway'}**! Please contact <@${giveaway.hostId}> to claim your prize.`;
           const winnerPingMsg = await channel.send({ content: winnerAnnouncement });
           giveaway.winnerPingMessageId = winnerPingMsg.id;
+            try {
+  const giveawayClaim = GIVEAWAY_CONFIG.giveawayClaim;
+
+  if (giveawayClaim?.enabled) {
+    const firstWinnerId = winners[0];
+
+    const claimCategory = giveawayClaim.category;
+    const claimChannelName = giveawayClaim.channelName || 'giveaway-claim';
+
+    const additionalUserIds = [
+      ...winners,
+      ...(giveaway.hostId ? [giveaway.hostId] : []),
+    ];
+
+    const winnerMember = await guild.members
+      .fetch(firstWinnerId)
+      .catch(() => null);
+
+    if (winnerMember) {
+      const winnerPing = giveawayClaim.pingWinner
+        ? winners.map(id => `<@${id}>`).join(' ')
+        : '';
+
+      const hostPing = giveawayClaim.pingHost && giveaway.hostId
+        ? `<@${giveaway.hostId}>`
+        : '';
+
+      const pingText = [winnerPing, hostPing]
+        .filter(Boolean)
+        .join(' ');
+
+      const claimReason =
+        `Giveaway claim for **${giveaway.prize || 'giveaway'}**`;
+
+      const claimMessage =
+        `${pingText}\n\n` +
+        `🎉 **Giveaway Winner Claim**\n` +
+        `🎁 **Prize:** ${giveaway.prize || 'Unknown Prize'}\n` +
+        `🏆 **Winner(s):** ${winnerMentions}\n` +
+        `👑 **Host:** <@${giveaway.hostId}>`;
+
+      await createTicket(
+        guild,
+        winnerMember,
+        claimCategory,
+        claimReason,
+        'none',
+        {
+          channelName: claimChannelName,
+          additionalUserIds,
+          initialContent: claimMessage,
+        }
+      );
+
+      logger.info(
+        `Created giveaway claim ticket for giveaway ${messageId}`
+      );
+    }
+  }
+} catch (claimError) {
+  logger.error(
+    `Failed to create giveaway claim ticket for ${messageId}:`,
+    claimError
+  );
+            }
           await markGiveawayEnded(client, giveawayId, giveaway);
 
           try {
